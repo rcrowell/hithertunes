@@ -90,6 +90,8 @@ if __name__ == '__main__':
                                      database_location='./library.sq3',
                                      templates_location=os.path.dirname(os.path.abspath(__file__)),
                                      rebuild_library=rebuild_library)
+    cherrypy.config.update({'server.socket_host': '0.0.0.0',
+                            'server.socket_port': 8085})
     cherrypy.tree.mount(itunes_exporter, '/', config={'/static': {'tools.staticdir.on': True,
                                                                   'tools.staticdir.dir': absolute_path('./static')}})
     cherrypy.quickstart()

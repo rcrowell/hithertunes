@@ -10,7 +10,14 @@ pyitunes (current): git clone git://github.com/liamks/pyitunes.git
 For each of these 3 python packages, run the following to install:
   $ sudo python setup.py install
 
+
 RUN THE SERVER
 --------------
-To start up the server on localhost port 8080, just run the following script:
+To start up the server on localhost port 8085, just run the following script:
   # python hithertunes.py
+
+
+IF SOMETHING GOES WRONG
+-----------------------
+Read the console output; I tried to make it verbose enough to be actually useful.  Otherwise just bug rcrowell about it.
+
