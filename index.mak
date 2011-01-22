@@ -13,19 +13,20 @@
 
       table {border-collapse:collapse}
       table tr td {font-family:arial; font-size:10pt; padding-right:5px solid #FFF}
-      table tr:hover {cursor:pointer; background-color:#EEE}
-      table tr.selected {background-color:#B4FFC1}
+      table tr:hover {cursor:pointer; background-color:#EEE}      
+      table tr td.number {color:#AAA}
+      table tr.selected {background-color:#019BE3; color:#FFF}
+      table tr.selected td.number {color:#F3F3F3}
 
       div#playlist-header table {margin-top:10px}
       div#playlist-header tr {background-color: #DDD}
       div#playlist-header td {font-weight:bold}
-
-      div#jp_playlist_1 {height:30px; overflow:hidden}
       div#playlist-header {position:fixed; top:0px; height:144px; left:0px; right:0px; overflow:auto; padding:10px 0 0 10px; background-color:#fff}
-      div#playlist-container {padding-top:144px}
-      li#song-name {cursor:pointer}
+      div#playlist-header * {outline:none}
 
-      #playlist-header * {outline:none}
+      div#playlist-container {padding-top:144px}
+      div#jp_playlist_1 {height:30px; overflow:hidden}
+      li#song-name {cursor:pointer}
     </style>
 
   </head>
@@ -79,9 +80,9 @@
     % for song in songs:
       <tr id="song-row-${song['id']}" class="song-row" onclick='playSong("${song['id']}", ${song['artist'] | js}, ${song['name'] | js})' songid="${song['id']}" artist="${song['artist']|h}" name="${song['name']|h}">
 	<td style="width:300px">${song['artist']}</td>
-	<td style="width:20px">${'%02d' % song['track_number'] if song['track_number'] else ''}</td>
+	<td style="width:20px" class="number">${'%02d' % song['track_number'] if song['track_number'] else ''}</td>
 	<td style="width:312px">${song['name']}</td>
-	<td style="width:34px">${song['year'] if song['year'] else ''}</td>
+	<td style="width:34px" class="number">${song['year'] if song['year'] else ''}</td>
 	<td style="width:312px">${song['album']}</td>
       </tr>
     % endfor
