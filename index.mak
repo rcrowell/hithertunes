@@ -61,8 +61,6 @@
 	</div>
       </div>
       
-      <div id="jplayer-inspector"></div>
-      
       <table>
 	<tr>
 	  <td style="width:300px">artist</td>
@@ -88,12 +86,11 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>    
     <script src="/static/jplayer/jquery.jplayer.min.js"></script>
-    <script src="/static/jplayer/jquery.jplayer.inspector.js"></script>
     <link rel="stylesheet" type="text/css" href="/static/jplayer/jplayer.blue.monday.css">
     <script>
       function playSong(songId, artist, name) {
         $('#jplayer-container').jPlayer('setMedia', {mp3: '/song/' + songId}).jPlayer('play');
-        $("#song-name").text(artist + " - " + name).click(function() { window.location.hash = "song-row-" + songId; });
+        $("#song-name").text(artist + " - " + name).click(function() { $(document).scrollTop($("#song-row-" + songId).offset().top - 180); });
 
         // update the table UI to indicate what's playing
         $("tr.selected").removeClass("selected")
@@ -105,12 +102,7 @@
                                            solution: 'flash, html',
                                            supplied: "mp3",
                                            });
-
-          if (false) {
-            $("#jplayer-inspector").jPlayerInspector({jPlayer: $("#jplayer-container")});
-          }
-
-        });
+      });
     </script>
   </body>
 </html>
