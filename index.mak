@@ -24,6 +24,8 @@
       div#playlist-header {position:fixed; top:0px; height:144px; left:0px; right:0px; overflow:auto; padding:10px 0 0 10px; background-color:#fff}
       div#playlist-container {padding-top:144px}
       li#song-name {cursor:pointer}
+
+      #playlist-header * {outline:none}
     </style>
 
   </head>
@@ -33,14 +35,16 @@
 
     <div id="playlist-header">
       <div class="jp-audio">
-	<div class="jp-type-single">
+	<div class="jp-type-playlist">
 	  <div id="jp_interface_1" class="jp-interface">
 	    <ul class="jp-controls">
-	      <li><a href="#" class="jp-play" tabindex="1">play</a></li>
-	      <li><a href="#" class="jp-pause" tabindex="1">pause</a></li>
-	      <li><a href="#" class="jp-stop" tabindex="1">stop</a></li>
-	      <li><a href="#" class="jp-mute" tabindex="1">mute</a></li>
-	      <li><a href="#" class="jp-unmute" tabindex="1">unmute</a></li>
+	      <li><a href="javascript:void(0);" class="jp-play" tabindex="1">play</a></li>
+	      <li><a href="javascript:void(0);" class="jp-pause" tabindex="1">pause</a></li>
+	      <li><a href="javascript:void(0);" class="jp-stop" tabindex="1">stop</a></li>
+	      <li><a href="javascript:void(0);" class="jp-mute" tabindex="1">mute</a></li>
+	      <li><a href="javascript:void(0);" class="jp-unmute" tabindex="1">unmute</a></li>
+	      <li><a href="javascript:void(0);" class="jp-previous" tabindex="1">previous</a></li>
+	      <li><a href="javascript:void(0);" class="jp-next" tabindex="1">next</a></li>
 	    </ul>
 	    <div class="jp-progress">
 	      <div class="jp-seek-bar">
@@ -73,7 +77,7 @@
     <div id="playlist-container">
     <table>
     % for song in songs:
-      <tr id="song-row-${song['id']}" onclick='playSong("${song['id']}", ${song['artist'] | js}, ${song['name'] | js})'>
+      <tr id="song-row-${song['id']}" class="song-row" onclick='playSong("${song['id']}", ${song['artist'] | js}, ${song['name'] | js})' songid="${song['id']}" artist="${song['artist']|h}" name="${song['name']|h}">
 	<td style="width:300px">${song['artist']}</td>
 	<td style="width:20px">${'%02d' % song['track_number'] if song['track_number'] else ''}</td>
 	<td style="width:312px">${song['name']}</td>
@@ -89,19 +93,68 @@
     <link rel="stylesheet" type="text/css" href="/static/jplayer/jplayer.blue.monday.css">
     <script>
       function playSong(songId, artist, name) {
-        $('#jplayer-container').jPlayer('setMedia', {mp3: '/song/' + songId}).jPlayer('play');
-        $("#song-name").text(artist + " - " + name).click(function() { $(document).scrollTop($("#song-row-" + songId).offset().top - 180); });
+        $("#jplayer-container").jPlayer("setMedia", {mp3: "/song/" + songId}).jPlayer("play");
+        $("#song-name").html(artist + " - " + name).click(function() { scrollToSong(songId); });
+
+        // keep track of what's being played now
+        $("#jplayer-container").attr("songid", songId);
 
         // update the table UI to indicate what's playing
-        $("tr.selected").removeClass("selected")
-        $("#song-row-" + songId).addClass("selected")
+        $("tr.selected").removeClass("selected");
+        $("#song-row-" + songId).addClass("selected");
+      }
+
+      function nextSong() {
+        var songId = $("#jplayer-container").attr("songid");
+        var nextSong = $("#song-row-" + songId).next();
+        if (!nextSong.length) {
+          nextSong = $("tr.song-row:first");
+        }
+
+        var nextSongId = nextSong.attr("songid");
+        var nextSongArtist = nextSong.attr("artist");
+        var nextSongName = nextSong.attr("name");
+        playSong(nextSongId, nextSongArtist, nextSongName);
+      }
+      function prevSong() {
+        var songId = $("#jplayer-container").attr("songid");
+        var nextSong = $("#song-row-" + songId).prev();
+        if (!nextSong.length) {
+          nextSong = $("tr.song-row:last");
+        }
+
+        var nextSongId = nextSong.attr("songid");
+        var nextSongArtist = nextSong.attr("artist");
+        var nextSongName = nextSong.attr("name");
+        playSong(nextSongId, nextSongArtist, nextSongName);
+      }
+
+      function scrollToSong(songId) {
+        $(document).scrollTop($("#song-row-" + songId).offset().top - 180);
+      }
+      function scrollToNowPlaying() {
+        var songId = $("#jplayer-container").attr("songid");
+        return scrollToSong(songId);
       }
 
       $(function() { 
           $("#jplayer-container").jPlayer({swfPath: '/static/jplayer',
                                            solution: 'flash, html',
                                            supplied: "mp3",
-                                           });
+                                           ended: function() {
+                                             nextSong();
+                                           }
+          });
+
+          $(".jp-next").click(function() {
+            nextSong();
+            scrollToNowPlaying();
+          });
+
+          $(".jp-previous").click(function() {
+            prevSong();
+            scrollToNowPlaying();
+          });
       });
     </script>
   </body>
