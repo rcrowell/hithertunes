@@ -9,7 +9,7 @@
     <title>library :: hithertunes</title>
 
     <style type="text/css">
-      body {padding:10px; margin:0}
+      body {padding:10px; margin:0; font-family:arial; font-size:11pt}
 
       table {border-collapse:collapse}
       table tr td {font-family:arial; font-size:10pt; padding-right:5px solid #FFF}
@@ -23,6 +23,9 @@
       div#playlist-header td {font-weight:bold}
       div#playlist-header {position:fixed; top:0px; height:144px; left:0px; right:0px; overflow:auto; padding:10px 0 0 10px; background-color:#fff}
       div#playlist-header * {outline:none}
+
+      div.jp-audio {float:left}
+      div#sidebar-header {float:left; margin-left:10px}
 
       div#playlist-container {padding-top:144px}
       div#jp_playlist_1 {height:30px; overflow:hidden}
@@ -66,7 +69,19 @@
 	</div>
       </div>
       
-      <table>
+      <div id="sidebar-header">
+	<label for="playlist-select">Playlist:</label>
+	<select id="playlist-select" onchange="document.location.href = '/index/' + $(this).val()">
+	  <option value="0">Entire Library</option>
+	  % for playlist in playlists:
+	  <option value="${playlist['id']}" ${'selected="selected"' if playlist['id'] == int(selected_playlist_id) else ''} >${playlist['name']}</option>
+	  % endfor
+	</select>
+      </div>
+
+      <div style="clear:both"></div>
+
+      <table class="playlist-table-header">
 	<tr>
 	  <td style="width:300px">artist</td>
 	  <td style="width:334px" colspan="2">track</td>

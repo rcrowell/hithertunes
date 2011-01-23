@@ -30,7 +30,7 @@ class iTunesExporter(object):
         if rebuild_library:
             print "loading itunes:     %s" % (absolute_path(library_location),)
             parser = itunes.XMLLibraryParser(absolute_path(library_location))
-            library = itunes.Library(parser.dictionary)
+            library = itunes.Library(parser.songs, parser.playlists)
 
             print "building sqlite3:   %s" % (self.database_location)
             cursor = self._sql_cursor()
@@ -39,35 +39,73 @@ class iTunesExporter(object):
             cursor.connection.commit()
             cursor.connection.close()
 
+        print "using templates:    %s" % (templates_location,)
+
     def _sql_cursor(self):
         connection = sqlite3.connect(self.database_location)
         connection.row_factory = sqlite3.Row
         return connection.cursor()
 
     def _create_schema(self, cursor):
-        cursor.execute('''DROP TABLE songs''')
-        try: cursor.execute('''CREATE TABLE songs (id INTEGER PRIMARY KEY, name TEXT, artist TEXT, album TEXT, track_number INTEGER, year INTEGER, location TEXT)''')
-        except sqlite3.OperationalError, e: 
-            print e   # don't go any further here; db exists already
-            return
+        try: 
+            cursor.execute('''DROP TABLE songs''')
+            cursor.execute('''DROP TABLE playlists''')
+            cursor.execute('''DROP TABLE playlist_songs''')
+        except: pass
+
+        try: 
+            cursor.execute('''CREATE TABLE songs (id INTEGER PRIMARY KEY, itunes_id INTEGER, name TEXT, artist TEXT, album TEXT, track_number INTEGER, year INTEGER, location TEXT)''')
+            cursor.execute('''CREATE TABLE playlists (id INTEGER PRIMARY KEY, itunes_id INTEGER, name TEXT, visible INTEGER)''')
+            cursor.execute('''CREATE TABLE playlist_songs (id INTEGER PRIMARY KEY, playlist_id INTEGER, song_id INTEGER, position INTEGER)''')
+        except sqlite3.OperationalError, e:
+            print e
 
     def _parse_library(self, library, cursor):
         for song in library.songs:
             if not song.artist or not song.album or not song.name: continue
 
-            cursor.execute('''INSERT INTO songs (artist, album, name, track_number, year, location) VALUES (?, ?, ?, ?, ?, ?)''', (song.artist, song.album, song.name, song.track_number, song.year, song.location))
+            cursor.execute('''INSERT INTO songs (itunes_id, artist, album, name, track_number, year, location) VALUES (?, ?, ?, ?, ?, ?, ?)''', (song.itunes_id, song.artist, song.album, song.name, song.track_number, song.year, song.location))
+
+        for playlist in library.playlists:
+            if not playlist.name: continue
+    
+            # insert the playlists into the database
+            cursor.execute('''INSERT INTO playlists (itunes_id, name, visible) VALUES (?, ?, ?)''', (playlist.itunes_id, playlist.name, False if playlist.visible == False else True))
+            playlist_id = cursor.lastrowid
+
+            # get the songs out of the playlist
+            position = 0            
+            for song in playlist.songs:
+                cursor.execute('''SELECT id FROM songs WHERE itunes_id = ?''', (song.itunes_id,))                
+                result = cursor.fetchone()
+                song_id = result[0] if result else None
+
+                if song_id: 
+                    cursor.execute('''INSERT INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)''', (playlist_id, song_id, position))
+                    position += 1
 
     @cherrypy.expose
-    def index(self):
+    def index(self, playlist_id=None):
         """Display the whole library on one screen."""
+        playlist_id = int(playlist_id) if playlist_id else 0
+
         cursor = self._sql_cursor()
-        cursor.execute('''SELECT id, artist, album, name, track_number, year FROM songs ORDER BY LOWER(artist), COALESCE(year, 99999), LOWER(album), COALESCE(track_number, 99999), LOWER(name), id''')
-        results = [x for x in cursor]
-        template = self.template_lookup.get_template('index.mak')
-        try: return template.render(songs=results)
-        except: return exceptions.html_error_template().render()
+
+        # if no playlist was chosen, display the entire library
+        if not playlist_id:
+            cursor.execute('''SELECT id, artist, album, name, track_number, year FROM songs ORDER BY LOWER(artist), COALESCE(year, 99999), LOWER(album), COALESCE(track_number, 99999), LOWER(name), id''')
+        else:
+            cursor.execute('''SELECT songs.id, artist, album, name, track_number, year FROM songs INNER JOIN playlist_songs ON playlist_songs.song_id = songs.id AND playlist_songs.playlist_id = ? ORDER BY position, songs.id''', (playlist_id,))
+        songs = [x for x in cursor]
+
+        cursor.execute('''SELECT id, name FROM playlists ORDER BY LOWER(name)''')
+        playlists = [x for x in cursor]
 
         cursor.connection.close()
+
+        template = self.template_lookup.get_template('index.mak')
+        try: return template.render(songs=songs, playlists=playlists, selected_playlist_id=playlist_id)
+        except: return exceptions.html_error_template().render()
 
     @cherrypy.expose
     def song(self, song_id):
@@ -75,7 +113,6 @@ class iTunesExporter(object):
         cursor = self._sql_cursor()
         for row in cursor.execute('''SELECT location FROM songs WHERE id = ?''', (song_id,)):
             cherrypy.response.headers['Content-type'] = 'audio/mpeg'
-            print row['location']
             return urllib.urlopen(decode_unicode_references(row['location'])).read()
 
 
@@ -88,7 +125,7 @@ if __name__ == '__main__':
 
     itunes_exporter = iTunesExporter(library_location='~/Music/iTunes/iTunes Music Library.xml', 
                                      database_location='./library.sq3',
-                                     templates_location=os.path.dirname(os.path.abspath(__file__)),
+                                     templates_location=os.path.dirname(os.path.abspath(__file__)) + '/templates',
                                      rebuild_library=rebuild_library)
     cherrypy.config.update({'server.socket_host': '0.0.0.0',
                             'server.socket_port': 8085})
